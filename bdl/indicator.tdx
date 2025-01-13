@@ -1,0 +1,78 @@
+{成交量分析指标
+作者：未知
+日期：2024-01-13
+功能：分析市场买卖力量对比和成交量变化特征}
+
+{参数设置}
+N:=3;    {移动平均周期}
+T:=100;  {历史数据参考周期}
+
+{基础价格计算}
+WJ:=(H+L+C)/3;    {加权价格}
+
+{量价分析}
+V1:=IF(H=L,1,H-MAX(O,C));           {上影线区间}
+V2:=IF(H=L,1,MAX(C,O)-WJ);          {实体上半区间}
+V3:=IF(H=L,1,MIN(O,C)-L);           {下影线区间}
+V4:=IF(H=L,1,WJ-MIN(C,O));          {实体下半区间}
+V5:=VOL/(H-L)/2;                     {成交量密度}
+V6:=(V1*V5);                         {上影线成交量}
+V7:=(V2*V5);                         {实体上半成交量}
+V8:=(V3*V5);                         {下影线成交量}
+V9:=(V4*V5);                         {实体下半成交量}
+
+{买卖力量计算}
+买盘:=(V9+V8);                       {买盘力量}
+卖盘:=(V6+V7);                       {卖盘力量}
+买卖差:=买盘-卖盘,NODRAW;            {买卖力量对比}
+
+{技术指标计算}
+CC:=EMA(买卖差,5)*20;                {买卖差均线}
+AA:=VOL/((HIGH-LOW)*2-ABS(CLOSE-OPEN));  {成交量系数}
+主买:=IF(CLOSE>OPEN,AA*(HIGH-LOW),
+    IF(CLOSE<OPEN,AA*((HIGH-OPEN)+(CLOSE-LOW)),VOL/2)),NODRAW,COLORRED;
+
+{均线计算}
+CJ:=SMA(CC,N,1)/1000,COLORFFFFFF,NODRAW;
+CD:=SMA(CJ,N,1),COLOR00FFFF,NODRAW;
+CK:=(5*CD+4*REF(CD,1)+3*REF(CD,2)+2*REF(CD,3)+REF(CD,4))/15,COLORFF02FF,NODRAW;
+
+{显示设置}
+NOTEXT:=SMA(CC,N,1),COLORFFFFFF,LINETHICK2;
+NOTEXT1:=SMA(SMA(CC,N,1),N,1),COLOR00FFFF,LINETHICK2;
+NOTEXT2:=(5*SMA(SMA(CC,N,1),N,1)+4*REF(SMA(SMA(CC,N,1),N,1),1)+
+    3*REF(SMA(SMA(CC,N,1),N,1),2)+2*REF(SMA(SMA(CC,N,1),N,1),3)+
+    REF(SMA(SMA(CC,N,1),N,1),4))/15,COLORFF02FF,LINETHICK2;
+
+{主动买卖计算}
+ZM:=IF(CLOSE>OPEN,AA*(HIGH-LOW),
+    IF(CLOSE<OPEN,AA*((HIGH-OPEN)+(CLOSE-LOW)),VOL/2))/1000,NODRAW,COLORRED;
+ZS:=IF(CLOSE>OPEN,AA*((HIGH-CLOSE)+(OPEN-LOW)),
+    IF(CLOSE<OPEN,AA*(HIGH-LOW),VOL/2))/1000,NODRAW,COLORRED;
+ZF:=ZM-ZS,NODRAW,COLORRED;
+
+{买卖比例}
+买盘占比:买盘/(ABS(买盘)+ABS(卖盘))*100,NODRAW;
+
+{成交量分析}
+总额:V,NODRAW;
+前总额:REF(V,1),NODRAW,COLORLIMAGENTA;
+昨额比:V/前总额,NODRAW,COLORLIMAGENTA;
+买:=买盘*2,LINETHICK3,COLORBLUE,NODRAW;
+卖:=总额-买,NODRAW;
+差:=买-ABS(卖),NODRAW,COLORLIMAGENTA;
+差额万元:(差*C)/100,NODRAW;
+
+{量能分析}
+最大量:HHV(V,100)/10000,NODRAW,COLORYELLOW;
+大差:(最大量*10000-V)/10000,NODRAW;
+大比:V/(最大量*10000),NODRAW;
+大差万:(最大量-REF(最大量,1))/10000,NODRAW;
+次大:最大量/REF(最大量,1);
+
+{图形绘制}
+STICKLINE(C>=REF(C,1),0,VOL,-1,0),COLORCYAN;     {上涨成交量}
+STICKLINE(C<REF(C,1),0,VOL,-1,0),COLORCYAN;      {下跌成交量}
+STICKLINE(主买>0,0,主买,-1,0),COLORRED;          {主动买入}
+STICKLINE(主买>0 AND 大比=1,0,主买,-1,0),COLORYELLOW;  {创新高买入}
+STICKLINE(主买<0 AND 大比=1,0,主买,-1,0),COLORGREEN;   {创新高卖出} 
