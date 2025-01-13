@@ -1,0 +1,119 @@
+{*
+ * 成交量分析指标
+ * 功能：分析市场买卖力量对比和成交量变化特征
+ * 作者：未知
+ * 日期：2024-01-13
+ *}
+
+{参数设置}
+N:=3;            {移动平均周期}
+T:=100;          {历史数据参考周期}
+
+{基础数据定义}
+PH:=H;           {最高价}
+PL:=L;           {最低价}
+PO:=O;           {开盘价}
+PC:=C;           {收盘价}
+VOLUME:=V;       {成交量}
+
+{基础价格计算}
+WP:=(PH+PL+PC)/3;  {加权价格}
+
+{K线结构分析}
+US:=IF(PH=PL,1,    {上影线长度}
+       PH-MAX(PO,PC));
+
+BU:=IF(PH=PL,1,    {实体上半部分}
+       MAX(PC,PO)-WP);
+
+LS:=IF(PH=PL,1,    {下影线长度}
+       MIN(PO,PC)-PL);
+
+BL:=IF(PH=PL,1,    {实体下半部分}
+       WP-MIN(PC,PO));
+
+{成交量分布计算}
+VD:=VOLUME/(PH-PL)/2;  {成交量密度}
+
+USV:=US*VD;         {上影线成交量}
+BUV:=BU*VD;         {实体上半成交量}
+LSV:=LS*VD;         {下影线成交量}
+BLV:=BL*VD;         {实体下半成交量}
+
+{买卖力量计算}
+BV:=BLV+LSV;        {买盘力量}
+SV:=USV+BUV;        {卖盘力量}
+VDIFF:=BV-SV,NODRAW;{买卖差值}
+
+{技术指标计算}
+VMA:=EMA(VDIFF,5)*20;  {买卖差均线}
+VC:=VOLUME/((H-L)*2-ABS(C-O));  {成交量系数}
+
+{主动买卖计算}
+AB:=IF(C>O,         {主动买入}
+       VC*(H-L),
+       IF(C<O,
+          VC*((H-O)+(C-L)),
+          VOLUME/2)),NODRAW,COLORRED;
+
+{均线计算}
+MA1:=SMA(VMA,N,1)/1000,COLORFFFFFF,NODRAW;  {快速均线}
+MA2:=SMA(MA1,N,1),COLOR00FFFF,NODRAW;       {中期均线}
+MA3:=(5*MA2+4*REF(MA2,1)+3*REF(MA2,2)+      {加权均线}
+      2*REF(MA2,3)+REF(MA2,4))/15,
+      COLORFF02FF,NODRAW;
+
+{显示设置}
+D1:=SMA(VMA,N,1),COLORFFFFFF,LINETHICK2;    {显示线1}
+D2:=SMA(SMA(VMA,N,1),N,1),COLOR00FFFF,LINETHICK2;  {显示线2}
+D3:=(5*D2+4*REF(D2,1)+3*REF(D2,2)+          {显示线3}
+     2*REF(D2,3)+REF(D2,4))/15,
+     COLORFF02FF,LINETHICK2;
+
+{主动买卖分析}
+ABV:=IF(C>O,        {主动买入量}
+        VC*(H-L),
+        IF(C<O,
+           VC*((H-O)+(C-L)),
+           VOLUME/2))/1000,NODRAW,COLORRED;
+
+ASV:=IF(C>O,        {主动卖出量}
+        VC*((H-C)+(O-L)),
+        IF(C<O,
+           VC*(H-L),
+           VOLUME/2))/1000,NODRAW,COLORRED;
+
+ADIFF:=ABV-ASV,NODRAW,COLORRED;  {主动买卖差}
+
+{买卖比例分析}
+BRATIO:=BV/(ABS(BV)+ABS(SV))*100,NODRAW;
+
+{成交量分析}
+TV:=V,NODRAW;
+PV:=REF(V,1),NODRAW,COLORLIMAGENTA;
+VRATIO:=V/PV,NODRAW,COLORLIMAGENTA;
+BT:=BV*2,LINETHICK3,COLORBLUE,NODRAW;
+ST:=TV-BT,NODRAW;
+VDT:=BT-ABS(ST),NODRAW,COLORLIMAGENTA;
+DAMT:=(VDT*C)/100,NODRAW;
+
+{量能分析}
+MV:=HHV(V,100)/10000,NODRAW,COLORYELLOW;
+VGAP:=(MV*10000-V)/10000,NODRAW;
+VRMAX:=V/(MV*10000),NODRAW;
+MVC:=(MV-REF(MV,1))/10000,NODRAW;
+MVR:=MV/REF(MV,1);
+
+{图形绘制}
+STICKLINE(C>=REF(C,1),0,V,-1,0),COLORCYAN;  {上涨成交量}
+STICKLINE(C<REF(C,1),0,V,-1,0),COLORCYAN;   {下跌成交量}
+STICKLINE(AB>0,0,AB,-1,0),COLORRED;           {主动买入}
+STICKLINE(AB>0 AND VRMAX=1,0,AB,-1,0),        {创新高买入}
+         COLORYELLOW;
+STICKLINE(AB<0 AND VRMAX=1,0,AB,-1,0),        {创新高卖出}
+         COLORGREEN;
+
+
+
+
+
