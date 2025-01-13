@@ -1,0 +1,105 @@
+{*
+ * 趋势分析指标（整合版）
+ * 功能：分析市场趋势强度和方向，结合共振信号
+ * 作者：未知
+ * 日期：2024-01-13
+ *}
+
+{趋势线计算}
+上趋势:MA(LOW,20)*1.2,COLOR0080FF,LINETHICK2;    {20日低点均线*1.2，强势上轨}
+次上趋势:MA(LOW,20)*1.1,COLORYELLOW;             {20日低点均线*1.1，次强上轨}
+次下趋势:MA(HIGH,20)*0.9,COLORWHITE;             {20日高点均线*0.9，次弱下轨}
+下趋势:MA(HIGH,20)*0.8,COLORGREEN,LINETHICK2;    {20日高点均线*0.8，强势下轨}
+
+{技术指标计算}
+ZD:=(C-REF(C,1))/REF(C,1)*100;                   {涨跌幅}
+HDZF:=(HHV(H,20)-C)/(HHV(H,20)-LLV(L,20));      {回调振幅}
+
+{趋势强度判断}
+趋势强度:=IF(C>次上趋势,                         {趋势强度分级}
+           IF(C>上趋势,4,3),                      {4=超强势，3=强势}
+           IF(C>次下趋势 AND C<次上趋势,2,        {2=盘整}
+              IF(C<下趋势,0,1)));                 {0=超弱势，1=弱势}
+
+{K线图形绘制}
+{画趋势背景线}
+STICKLINE(趋势强度=0,H,L,3,1),COLORBLUE;         {超弱势蓝色}
+STICKLINE(趋势强度=1,H,L,3,1),COLORGREEN;        {弱势绿色}
+STICKLINE(趋势强度=2,H,L,3,1),COLORGRAY;         {盘整灰色}
+STICKLINE(趋势强度=3,H,L,3,1),COLORYELLOW;       {强势黄色}
+STICKLINE(趋势强度=4,H,L,3,1),COLORMAGENTA;      {超强势品红}
+
+{画趋势实体线}
+STICKLINE(趋势强度=0,C,O,2,0),COLORBLUE;         {超弱势实体}
+STICKLINE(趋势强度=1,C,O,2,0),COLORGREEN;        {弱势实体}
+STICKLINE(趋势强度=2,C,O,2,0),COLORGRAY;         {盘整实体}
+STICKLINE(趋势强度=3,C,O,2,0),COLORYELLOW;       {强势实体}
+STICKLINE(趋势强度=4,C,O,2,0),COLORMAGENTA;      {超强势实体}
+
+{===================== 共振信号部分 =====================}
+
+{底部信号计算}
+M:=30;
+N:=15;
+AJ:=HHV(H,M)=H;
+AJT:=BARSLAST(AJ);
+AJ1:=LLV(L,N)=L;
+AJ1T:=BARSLAST(AJ1);
+TJ:=HHV(H,M)=H;
+TJT:BARSLAST(TJ),NODRAW;
+TJ1T:=BARSLAST(AJ1);
+
+{底部信号显示}
+底部信号:=(TJT=0,H,TJ1T=0) AND AJ1 AND FILTERX(AJ1,TJT+1),NODRAW;
+DRAWTEXT(底部信号 AND 趋势强度<2,L,'底'),COLORYELLOW;    {仅显示文字}
+
+{日线指标计算}
+日K:="KDJ.K#DAY"(9,3,3),NODRAW;
+日D:="KDJ.D#DAY"(9,3,3),NODRAW;
+日DIF:="MACD.DIF#DAY"(12,26,9),NODRAW;
+日DEA:="MACD.DEA#DAY"(12,26,9),NODRAW;
+日RSI:="RSI.RSI1#DAY"(9),NODRAW;
+
+{周线指标计算}
+周K:="KDJ.K#WEEK"(9,3,3),NODRAW;
+周D:="KDJ.D#WEEK"(9,3,3),NODRAW;
+周DIF:="MACD.DIF#WEEK"(12,26,9),NODRAW;
+周DEA:="MACD.DEA#WEEK"(12,26,9),NODRAW;
+周RSI:="RSI.RSI1#WEEK"(9),NODRAW;
+
+{月线指标计算}
+月K:="KDJ.K#MONTH"(9,3,3),NODRAW;
+月D:="KDJ.D#MONTH"(9,3,3),NODRAW;
+月DIF:="MACD.DIF#MONTH"(12,26,9),NODRAW;
+月DEA:="MACD.DEA#MONTH"(12,26,9),NODRAW;
+月RSI:="RSI.RSI1#MONTH"(9),NODRAW;
+
+{共振条件判断}
+X1:=日K>日D;
+X2:=日DIF>日DEA;
+X3:=日RSI>50;
+X4:=周K>周D;
+X5:=周DIF>周DEA;
+X6:=周RSI>50;
+X7:=月K>月D;
+X8:=月DIF>月DEA;
+X9:=月RSI>50;
+
+{月共振信号}
+月RSI1:="RSI.RSI1#MONTH"(9),COLORWHITE,NODRAW;
+A:=月RSI1>50;
+首月R:CROSS(A>REF(A,1),0.5),NODRAW;
+DRAWTEXT(首月R AND 趋势强度>2,H,'月共振'),COLORWHITE;    {仅显示文字}
+
+{周共振信号}
+周RSI1:="RSI.RSI1#WEEK"(9),COLORGREEN,NODRAW;
+AAAA:=周RSI1>50;
+首周R:CROSS(AAAA>REF(AAAA,1),0.5),NODRAW;
+DRAWTEXT(首周R AND 趋势强度>1,H,'周共振'),COLORRED;    {仅显示文字}
+
+{黄金坑信号}
+周K1:="KDJ.K#WEEK"(9,3,3),COLORBLUE,NODRAW;
+周D1:="KDJ.D#WEEK"(9,3,3),COLORBLUE,NODRAW;
+AAAAAA:=周K1>周D1;
+首周K:CROSS(AAAAAA>REF(AAAAAA,1),0.5),NODRAW;
+DRAWTEXT(首周K AND 趋势强度<2,L,'黄金坑'),COLORYELLOW;    {仅显示文字} 
