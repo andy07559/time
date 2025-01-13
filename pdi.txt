@@ -1,0 +1,47 @@
+{DMI指标参数设置}
+N:=7;    {DMI计算周期}
+M:=4;    {ADX计算周期}
+
+{计算真实波幅和方向动量}
+MTR:=SUM(MAX(MAX(HIGH-LOW,ABS(HIGH-REF(CLOSE,1))),ABS(REF(CLOSE,1)-LOW)),N);  {真实波幅}
+HD :=HIGH-REF(HIGH,1);   {上升动量}
+LD :=REF(LOW,1)-LOW;     {下降动量}
+DMP:=SUM(IF(HD>0&&HD>LD,HD,0),N);  {上升方向}
+DMM:=SUM(IF(LD>0&&LD>HD,LD,0),N);  {下降方向}
+
+{计算PDI和MDI}
+PDI:=DMP*100/MTR;  {上升方向指标}
+MDI:=DMM*100/MTR;  {下降方向指标}
+
+{计算ADX和ADXR}
+ADX:=MA(ABS(MDI-PDI)/(MDI+PDI)*100,M);  {动向平均指数}
+ADXR:=(ADX+REF(ADX,M))/2;  {动向平均指数评估}
+
+{交易信号计算}
+{买入条件：PDI>4且前4天PDI=0，ADX下降且大于60}
+BUYCON:=PDI>4 AND REF(PDI,1)=0 AND REF(PDI,2)=0 AND REF(PDI,3)=0 AND REF(PDI,4)=0 AND ADX<REF(ADX,1) AND ADX>60;
+
+{持仓计数：通过判断前几天的状态来确定天数}
+DAY1:=BUYCON;                      {第一天：出现买入信号}
+DAY2:=REF(BUYCON,1) AND PDI>4;     {第二天：前一天买入且PDI>4}
+DAY3:=REF(BUYCON,2) AND REF(PDI,1)>4 AND PDI>4;  {第三天：前两天持续满足条件且PDI>4}
+
+DAYN:=IF(DAY1,1,IF(DAY2,2,IF(DAY3,3,0)));  {当前持仓天数}
+
+{卖出条件：PDI<4或持仓到第3天}
+SELLCON:=(DAY2 OR DAY3) AND (PDI<4 OR DAYN>=3);
+
+{显示主图和信号}
+主图:PDI,COLORRED;
+
+{显示文字}
+买入:IF(BUYCON,LOW*0.99,DRAWNULL),COLORRED,LINETHICK2;
+持仓:IF(DAYN=1,LOW*0.97,IF(DAYN=2,LOW*0.97,IF(DAYN=3,LOW*0.97,DRAWNULL))),COLORWHITE,LINETHICK2;
+卖出:IF(SELLCON,HIGH*1.01,DRAWNULL),COLORGREEN,LINETHICK2;
+
+{显示文字标签}
+DRAWTEXT(BUYCON,LOW*0.99,'买');
+DRAWTEXT(DAYN=1,LOW*0.97,'1');
+DRAWTEXT(DAYN=2,LOW*0.97,'2');
+DRAWTEXT(DAYN=3,LOW*0.97,'3');
+DRAWTEXT(SELLCON,HIGH*1.01,'卖');
