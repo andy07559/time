@@ -1,0 +1,119 @@
+// 一目均衡指标
+// 版本: 1.0
+// 日期: 2024-01-14
+// 作者: CLAUDE
+
+{基础参数设置}
+支撑压力:=2;                                  // 支撑压力线显示开关
+M2:=22;                                       // 迟行带调整参数
+N1:=8;N2:=22;N3:=44;                         // 转换线、基准线、先行带参数
+
+{基础数据计算}
+// 计算波动区间
+AA:=(HHV(HIGH,120)-LLV(LOW,120))/30,LINETHICK;  // 120日高低点波动范围的1/30
+
+// 计算加权收盘价
+VAR1:=(2*CLOSE+HIGH+LOW)/4;                     // 收盘价加权计算
+
+{一目均衡图基本线}
+// 转换线(快线)
+转换线:(HHV(HIGH,N1)+LLV(LOW,N1))/2,COLORAAFF99,LINETHICK2;  // 9日高低点的中值
+
+// 基准线(慢线) 
+基准线:(HHV(HIGH,N2)+LLV(LOW,N2))/2,COLORFF6DD8,LINETHICK2;  // 26日高低点的中值
+
+// 迟行带
+迟行带:REFX(CLOSE,N2),COLORFF9224,LINETHICK2;   // 26日前的收盘价
+迟行带调:REFX(CLOSE,M2),COLORRED,LINETHICK2;    // 22日前的收盘价
+
+{云带计算}
+// 先行带A线
+先行带A:REF((转换线+基准线)/2,N2),COLORYELLOW,LINETHICK;  // 26日前的转换线和基准线均值
+
+// 先行带B线
+先行带B:REF((HHV(HIGH,N3)+LLV(LOW,N3))/2,N2),COLOR909090;  // 26日前的52日高低点中值
+
+// 绘制云带
+STICKLINE(先行带A<先行带B,先行带A,先行带B,2,1.5),COLOR339933;  // 绿云带
+STICKLINE(先行带A>=先行带B,先行带A,先行带B,2,0.1),COLOR0033CC; // 蓝云带
+
+// 绘制主要线条
+PLOYLINE(1,先行带A),COLORYELLOW;   // 先行带A线
+PLOYLINE(1,基准线),COLORFF6DD8;    // 基准线
+PLOYLINE(1,转换线),COLORAAFF99;    // 转换线
+
+{买卖信号}
+// 金叉信号(买入)
+DRAWTEXT(CROSS(转换线,基准线) AND VAR1<MIN(先行带A,先行带B),MIN(基准线,LOW)*0.995,'▲'),COLORRED;  // 云带下金叉
+DRAWTEXT(CROSS(转换线,基准线) AND RANGE(VAR1,MIN(先行带A,先行带B),MAX(先行带A,先行带B)),LOW*0.995,'▲\N▲'),COLORRED;  // 云带内金叉
+DRAWTEXT(CROSS(转换线,基准线) AND VAR1>MAX(先行带A,先行带B),LOW-AA*0.5,'▲\N▲\N▲'),COLORRED;  // 云带上金叉
+
+// 死叉信号(卖出)
+DRAWTEXT(CROSS(基准线,转换线) AND VAR1<MIN(先行带A,先行带B),MAX(基准线,HIGH)+AA*2,'▼\N▼\N▼'),COLORFF9966;  // 云带下死叉
+DRAWTEXT(CROSS(基准线,转换线) AND RANGE(VAR1,MIN(先行带A,先行带B),MAX(先行带A,先行带B)),MAX(基准线,HIGH)+AA,'▼\N▼'),COLORFF9966;  // 云带内死叉
+DRAWTEXT(CROSS(基准线,转换线) AND VAR1>MAX(先行带A,先行带B),MAX(基准线,HIGH)+AA,'▼'),COLORFF9966;  // 云带上死叉
+
+{K线绘制}
+// 阴线绘制
+STICKLINE(OPEN>=CLOSE ,CLOSE ,OPEN,0,0 ),COLOR00FF00;
+STICKLINE(OPEN>=CLOSE ,CLOSE ,OPEN,4,0 ),COLOR00FF00;
+// ... 其他阴线渐变效果
+
+// 阳线绘制
+STICKLINE(CLOSE>OPEN,CLOSE,OPEN,0,0) ,COLORFFBBFF;
+STICKLINE(CLOSE>OPEN,CLOSE,OPEN,4,0) ,COLORFF00FF;
+// ... 其他阳线渐变效果
+
+{趋势计数系统}
+// 下跌趋势计数
+B1:=C<REF(C,4);                              // 收盘价低于4日前
+NT0:=BARSLASTCOUNT(B1);                      // 连续下跌天数
+TJ21:=NT0=9;                                 // 是否达到9天
+TJ23:=ISLASTBAR AND BETWEEN(NT0,5,8);        // 最后一根K线且下跌5-8天
+
+// 显示计数
+AY1:=(BACKSET(TJ21>0,9) OR BACKSET(TJ23>0,NT0))*NT0;  // 计算显示位置
+DRAWTEXT(AY1>0,L-(HHV(H,3)-LLV(L,3))*0.1,VAR2STR(AY1,0)),COLOR4CB122;  // 显示计数
+DRAWTEXT(NT0=9,L-(HHV(H,3)-LLV(L,3))*0.1,'9'),COLOR4CB122;  // 显示9天计数
+
+{支撑压力系统}
+// 支撑压力计算
+S1J:=BARSLAST(LLV(L,5)),NODRAW;             // 最近5日最低点距离
+
+// 压力线计算
+AAX:=IF(支撑压力=1 AND REF(AY1,1)=8 AND NT0=9 AND REF(O>=REF(C,1),8),REF(H,8),DRAWNULL);  // 压力位计算
+压力:=IF(支撑压力=1 AND REF(AY1,1)=8 AND NT0=9 AND REF(O<REF(C,1),8),IF(REF(C>=REF(H,1),8),REF(H,8),IF(O=C,REF(H,8),REF(C,9))),AAX),COLORC8C8C8;
+
+// 支撑线计算
+BB:=IF(支撑压力=1 AND REF(AY1,1)=8 AND NT0=9 AND IF(REF(O=C,1),O>=REF(C,1),O>REF(C,1)),IF(L>REF(L,1),REF(L-(H-L),1),L-(H-L)),DRAWNULL);
+转空:=IF(支撑压力=1 AND REF(AY1,1)=8 AND NT0=9 AND IF(REF(O=C,1),O<REF(C,1),O<=REF(C,1)),IF(MIN(REF(L,3),REF(L,2))<L,IF(REF(L,3)<REF(L,2),REF(L-(H-L),3),REF(L-(H-L),2)),IF(C>=REF(H,1),IF(L>REF(L,1),REF(L-(H-L),1),IF(REF(H=L,1) AND H=L,L-(REF(H,1)-L),L-(H-L))),IF(L<REF(L,1),IF(REF(H=L,1) AND H=L,L-(REF(H,1)-L),L-(H-L)),REF(L-(H-L),1)))),BB),COLORFF9900;
+
+// 绘制支撑压力线
+T1:=BARSLAST(压力);                          // 最近压力点位置
+T2:=BARSLAST(转空);                          // 最近支撑点位置
+压力线:DRAWLINE(REFX(T1=0,3),压力,REF(REFX(T1=0,3),1),REF(压力,1),1),COLORC8C8C8,LINETHICK2;  // 绘制压力线
+转空线:DRAWLINE(REFX(T2=0,3),转空,REF(REFX(T2=0,3),1),REF(转空,1),1),COLORFF9900,LINETHICK2;  // 绘制支撑线
+
+{股票筛选条件}
+// 基本筛选
+去ST:=NAMELIKE('ST')=0 AND NAMELIKE('*ST')=0 AND NAMELIKE('SST')=0 AND NAMELIKE('S*ST')=0;  // 排除ST股
+去除停牌:=DYNAINFO(4)>0;                     // 排除停牌股
+去除创业板:=IF(CODELIKE('300'),0,1);         // 排除创业板
+去除科创板:=IF(CODELIKE('688'),0,1);         // 排除科创板
+去:=去ST AND 去除停牌 AND 去除创业板 AND 去除科创板;  // 组合筛选条件
+
+{技术指标条件}
+// 均线偏离度
+HJ1:=(((CLOSE-MA(C,54))/MA(C,54))<0.1);      // 距离54日线偏离小于10%
+HJ2:=(((CLOSE-MA(C,10))/MA(C,10))<0.3);      // 距离10日线偏离小于30%
+HJ3:=(((HJ1=1) AND (HJ2=1))*0.2);            // 同时满足两个条件
+HJ4:=((((HJ3=0) AND (REF(HJ3,1)=0.2)) AND (REF((COUNT((HJ3=0.2),10)=10),1)=1))*-0.1);  // 突破条件
+HJ5:=HJ4=-0.1;                               // 最终突破信号
+
+// 选股信号
+猛虎成妖:去 AND HJ5 AND REF(MA(C,20)>MA(C,30),1) AND CROSS(C,DKX*0.995) AND CROSS(C,MA(C,13)*0.995) AND C/REF(C,1)>1.02 AND C>O AND O/REF(C,1)<1.03,COLORRED;  // 强势股选择
+DRAWTEXT(猛虎成妖,L*1.01,'猛虎成妖'),COLORYELLOW;  // 显示选股信号
+
+// 关注信号
+关注:CROSS(转换线,基准线);                    // 转换线上穿基准线
+DRAWTEXT(关注,L*1.01,'关注'),COLORYELLOW;     // 显示关注信号 
