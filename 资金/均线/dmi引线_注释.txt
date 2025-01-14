@@ -1,0 +1,59 @@
+// DMI引线指标 - 注释版本
+// 用于判断趋势的强弱和可能的转折点，是对DMI指标的改进
+
+// === 参数设置 ===
+N:=14;                    // 计算周期（默认14日）
+M:=6;                     // 移动平均周期（默认6日）
+
+// === 基础数据计算 ===
+// 真实波幅（TR）计算
+// 取以下三者的最大值：
+// 1. 当日最高价与最低价的差
+// 2. 当日最高价与昨日收盘价的差的绝对值
+// 3. 当日最低价与昨日收盘价的差的绝对值
+TR:=MAX(MAX((HIGH-LOW),ABS(HIGH-REF(CLOSE,1))),ABS(LOW-REF(CLOSE,1)));
+
+// 上升动向（+DM）计算
+// 条件：当日最高价减昨日最高价 > 昨日最低价减当日最低价，且差值为正
+DMP:=IF(HIGH-REF(HIGH,1)>REF(LOW,1)-LOW AND HIGH-REF(HIGH,1)>0,HIGH-REF(HIGH,1),0);
+
+// 下降动向（-DM）计算
+// 条件：昨日最低价减当日最低价 > 当日最高价减昨日最高价，且差值为正
+DMM:=IF(REF(LOW,1)-LOW>HIGH-REF(HIGH,1) AND REF(LOW,1)-LOW>0,REF(LOW,1)-LOW,0);
+
+// === 方向指标计算 ===
+// +DI：上升方向指标
+// 计算：+DM的N日移动平均/TR的N日移动平均*100
+PDI:=MA(DMP,N)/MA(TR,N)*100;
+
+// -DI：下降方向指标
+// 计算：-DM的N日移动平均/TR的N日移动平均*100
+MDI:=MA(DMM,N)/MA(TR,N)*100;
+
+// ADX：趋势强度指标
+// 计算：DI差值与DI和值的比率的M日移动平均*100
+ADX:=MA(ABS(PDI-MDI)/(PDI+MDI)*100,M);
+
+// === 引线系统 ===
+// 上引线：在PDI>MDI时取PDI值，否则取MDI值
+// 用红色粗线显示，表示上升趋势
+上引线:IF(PDI>MDI,PDI,MDI),COLORRED,LINETHICK2;
+
+// 下引线：在PDI<MDI时取PDI值，否则取MDI值
+// 用绿色粗线显示，表示下降趋势
+下引线:IF(PDI<MDI,PDI,MDI),COLORGREEN,LINETHICK2;
+
+// 趋势线：ADX值
+// 用黄色粗线显示，表示趋势强度
+趋势线:ADX,COLORYELLOW,LINETHICK2;
+
+{
+信号系统说明：
+1. 买入信号：上引线上穿下引线，且ADX向上
+2. 卖出信号：下引线下穿上引线，且ADX向上
+3. 趋势强度：
+   - ADX>25：趋势较强
+   - ADX<20：趋势较弱
+   - ADX上升：趋势增强
+   - ADX下降：趋势减弱
+} 

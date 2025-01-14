@@ -1,0 +1,88 @@
+/*
+DMI引线指标说明文档
+版本：1.0
+日期：2024-03-21
+
+一、指标介绍
+DMI引线指标是一个基于趋势方向指数（DMI）的改进型指标，主要用于判断趋势的强弱和可能的转折点。该指标通过对DMI的计算结果进行优化，形成更清晰的趋势引导线。
+
+二、参数设置
+1. 基础参数
+   - N：计算周期（默认14日）
+   - M：移动平均周期（默认6日）
+   
+2. 计算参数
+   - TR：真实波幅
+   - +DM：上升动向
+   - -DM：下降动向
+   - ADX：趋势强度
+
+三、计算方法
+1. 基础数据计算
+   TR := MAX(MAX((HIGH-LOW),ABS(HIGH-REF(CLOSE,1))),ABS(LOW-REF(CLOSE,1)))
+   +DM := IF(HIGH-REF(HIGH,1)>REF(LOW,1)-LOW AND HIGH-REF(HIGH,1)>0,HIGH-REF(HIGH,1),0)
+   -DM := IF(REF(LOW,1)-LOW>HIGH-REF(HIGH,1) AND REF(LOW,1)-LOW>0,REF(LOW,1)-LOW,0)
+
+2. 方向指标计算
+   +DI := MA(+DM,N)/MA(TR,N)*100
+   -DI := MA(-DM,N)/MA(TR,N)*100
+   ADX := MA(ABS(+DI--DI)/(+DI+-DI)*100,M)
+
+3. 引线计算
+   上引线 := IF(+DI>-DI,+DI,-DI)
+   下引线 := IF(+DI<-DI,+DI,-DI)
+
+四、图形显示
+1. 引线系统
+   - 红色：上引线，表示上升趋势
+   - 绿色：下引线，表示下降趋势
+   - 黄色：ADX线，表示趋势强度
+
+2. 信号系统
+   - 上引线上穿下引线：买入信号
+   - 下引线下穿上引线：卖出信号
+   - ADX线走势：趋势强度确认
+
+五、使用方法
+1. 基本应用
+   - 观察引线交叉信号
+   - 结合ADX判断趋势强度
+   - 确认趋势持续性
+
+2. 实战技巧
+   - 关注引线交叉的有效性
+   - 通过ADX筛选交易机会
+   - 结合支撑阻力位使用
+
+六、注意事项
+1. 指标存在一定滞后性
+2. 震荡市可能产生假信号
+3. 需要结合其他指标综合分析
+
+七、常见问题
+Q1: 如何判断引线交叉的有效性？
+A1: 需要结合ADX值和价格形态综合判断。
+
+Q2: 最佳的参数设置是什么？
+A2: 建议根据不同市场环境和交易品种进行优化。
+
+Q3: 如何避免假信号？
+A3: 建议结合成交量和其他技术指标进行确认。
+*/
+
+// 基础数据计算
+N:=14;
+M:=6;
+TR:=MAX(MAX((HIGH-LOW),ABS(HIGH-REF(CLOSE,1))),ABS(LOW-REF(CLOSE,1)));
+DMP:=IF(HIGH-REF(HIGH,1)>REF(LOW,1)-LOW AND HIGH-REF(HIGH,1)>0,HIGH-REF(HIGH,1),0);
+DMM:=IF(REF(LOW,1)-LOW>HIGH-REF(HIGH,1) AND REF(LOW,1)-LOW>0,REF(LOW,1)-LOW,0);
+
+// 方向指标计算
+PDI:=MA(DMP,N)/MA(TR,N)*100;
+MDI:=MA(DMM,N)/MA(TR,N)*100;
+ADX:=MA(ABS(PDI-MDI)/(PDI+MDI)*100,M);
+
+// 引线系统
+上引线:IF(PDI>MDI,PDI,MDI),COLORRED,LINETHICK2;
+下引线:IF(PDI<MDI,PDI,MDI),COLORGREEN,LINETHICK2;
+趋势线:ADX,COLORYELLOW,LINETHICK2; 

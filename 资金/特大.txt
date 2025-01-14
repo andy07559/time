@@ -1,0 +1,58 @@
+总额:=AMOUNT/10000,COLORFF00FF,NODRAW;
+超B全:=L2_AMO(0,0)/10000.0;
+大B全:=L2_AMO(1,0)/10000.0;
+中B全:=L2_AMO(2,0)/10000.0;
+小B全:=L2_AMO(3,0)/10000.0;
+超S全:=L2_AMO(0,1)/10000.0;
+大S全:=L2_AMO(1,1)/10000.0;
+中S全:=L2_AMO(2,1)/10000.0;
+小S全:=L2_AMO(3,1)/10000.0;
+超B:=L2_AMO(0,2)/10000.0;
+大B:=L2_AMO(1,2)/10000.0;
+中B:=L2_AMO(2,2)/10000.0;
+小B:=L2_AMO(3,2)/10000.0;
+超S:=L2_AMO(0,3)/10000.0;
+大S:=L2_AMO(1,3)/10000.0;
+中S:=L2_AMO(2,3)/10000.0;
+小S:=L2_AMO(3,3)/10000.0;
+二十到百万:=(大B+中B)-(大S+中S),NODRAW;
+二十到百万全:=(大B全+中B全)-(大S全+中S全),NODRAW;
+净流入:=(超B+大B+中B+小B)-(超S+大S+中S+小S),NODRAW,COLORWHITE;
+大宗流入:=((超B-超S)+(大B-大S)),NODRAW,COLORWHITE;
+被流入:=(总额-净流入),NODRAW,COLORWHITE;
+超大户:=(超B全-超S全),NODRAW,COLORWHITE;
+大户:=(大B全 - 大S全 ),NODRAW,COLORWHITE;
+中户:=(中B全 - 中S全),NODRAW,COLORGREEN;
+散户:=(小B全-小S全),NODRAW,COLORBLUE;
+平衡:=(ABS(超大户)+ABS(大户)+ABS(中户)+ABS(散户))/2,NODRAW,COLORRED;
+{超大户:(超B-超S),NODRAW;
+大户:((大B - 超B) - (大S - 超S)),NODRAW;
+中户:=((中B - 大B) - (中S - 大S)),NODRAW;
+散户:(净流入-超大户-大户-中户),NODRAW;}
+小单全:=(小B全-小S全),NODRAW,COLORRED;
+小单:=(小B-小S),NODRAW,COLORWHITE;
+被小单:=(小单全-小单),NODRAW,COLORYELLOW;
+中单全:=(中B全-中S全),NODRAW,COLORRED;
+中单:=(中B-中S),NODRAW,COLORWHITE;
+被中单:=(中单全-中单),NODRAW,COLORYELLOW;
+大单全:=(大B全-大S全),NODRAW,COLORRED;
+大单:=(大B-大S),NODRAW,COLORWHITE;
+被大单:=(大单全-大单),NODRAW,COLORYELLOW;
+超大单全:(超B全-超S全),NODRAW,COLORRED;
+超大单:(超B-超S),NODRAW,COLORWHITE;
+被超大单:(超大单全-超大单),NODRAW,COLORYELLOW;
+{净流入5日:SUM(净流入,5),NODRAW;
+大宗流入5日:SUM(大宗流入,5),NODRAW;
+近13日流向:SUM(净流入,13),NODRAW;}
+STICKLINE(超大单全>0,0,超大单全,2.5,0),COLORRED;
+STICKLINE(超大单全<0,0,超大单全,2.5,0),COLORGREEN;
+{STICKLINE(1,平衡,0,2.5,0),COLORRED;}
+STICKLINE(1,超大单,0,2,0),COLORWHITE;
+超大5日:SUM(超大单全,5),NODRAW;
+超大8日:SUM(超大单全,8),NODRAW;
+超大13日:SUM(超大单全,13),NODRAW;
+{STICKLINE(1, 中户,0,1,0),COLORGREEN;
+STICKLINE(1, 散户,0,0.5,0),COLORBLUE;}
+{显示数值条件:=超大单>=1;}
+{DRAWTEXT(显示数值条件,资金流向*0.9,VAR2STR(超大单,0)),COLORMAGENTA;}
+{DRAWTEXT(显示数值条件,资金流向*0.5,VAR2STR(超大单,2)),COLORYELLOW;};
