@@ -1,0 +1,202 @@
+// 缠论带板块指标 - 注释版本
+// 版本: 1.0
+// 日期: 2024-01-14
+// 功能: 结合板块分析的缠论交易系统
+
+// 基础参数设置
+N:=8,NODRAW;  // 基础周期参数,用于计算高低点
+
+// 板块涨幅计算
+板块涨幅:(HY_INDEXC-REF(HY_INDEXC,1))/REF(HY_INDEXC,1)*100,COLORRED;  // 计算板块指数涨跌幅
+
+// 板块排名显示
+TAX:=HORCALC(HYBLOCK,105,1,DRAWNULL);  // 获取板块排名
+TAA:=STRCAT(HYBLOCK,'      排名 ：');  // 构建显示文本
+DRAWTEXT_FIX(ISLASTBAR,0.50,0.005,0,STRCAT(TAA,CON2STR(TAX,0)));  // 在图表上显示板块名称和排名
+
+// 第一层中枢的构建
+A1:=REF(HIGH,N)=HHV(HIGH,2*N+1);  // 找出N周期前的高点是否为2N+1周期内的最高点
+B1:=FILTER(A1,N);  // 对高点进行过滤
+C1:=BACKSET(B1,N+1);  // 向前回溯N+1个周期
+D1:=FILTER(C1,N);  // 再次过滤确认高点
+
+A2:=REF(LOW,N)=LLV(LOW,2*N+1);  // 找出N周期前的低点是否为2N+1周期内的最低点
+B2:=FILTER(A2,N);  // 对低点进行过滤
+C2:=BACKSET(B2,N+1);  // 向前回溯N+1个周期
+D2:=FILTER(C2,N);  // 再次过滤确认低点
+
+// 中枢的中轴线计算
+E1:=(REF(LLV(LOW,2*N),1)+REF(HHV(HIGH,2*N),1))/2;  // 计算前期中枢中轴线
+E2:=(HIGH+LOW)/2;  // 计算当前K线中轴线
+
+// 中枢的高低点判断
+H1:=(D1 AND NOT(D2 AND E1>=E2)) OR ISLASTBAR OR BARSCOUNT(CLOSE)=1;  // 判断是否为中枢高点
+L1:=(D2 AND NOT(D1 AND E1<E2));  // 判断是否为中枢低点
+H2:=(D1 AND NOT(D2 AND E1>=E2));  // 二次确认中枢高点
+
+// 中枢延伸和转折的判断
+X1:=REF(BARSLAST(H1),1)+1;  // 计算上一高点到当前的周期数
+F1:=BACKSET(H1 AND COUNT(L1,X1)>0,LLVBARS(IF(L1,LOW,10000),X1));  // 判断高点后是否有有效低点
+G1:=F1>REF(F1,1);  // 判断是否形成新的低点
+I1:=BACKSET(G1,2);  // 向前回溯2个周期确认
+LD:=I1>REF(I1,1);  // 确认低点转折
+
+// ... existing code ...
+
+// 交易信号的生成
+MXLDSSHT:=DQH1<DQD1 AND C<HQH1 AND C>=HQD1;  // 两点上升回调信号
+MXLDSSFZ:=DQH1<DQD1 AND C<HQH1 AND C<HQD1;   // 两点上升反转下跌信号
+MXLDSSTP:=DQH1<DQD1 AND C>=HQH1 AND C>HQD1;  // 两点上升突破信号
+MXLDXDFT:=DQH1>DQD1 AND C<HQH1 AND C>=HQD1;  // 两点下跌反弹信号
+MXLDXDZJ:=DQH1>DQD1 AND C<HQH1 AND C<HQD1;   // 两点下跌中继信号
+MXLDFTTP:=DQH1>DQD1 AND C>=HQH1 AND C>HQD1;  // 两点下跌反转上升信号
+
+// 信号提示文字显示
+DRAWTEXT_FIX(ISLASTBAR AND MXLDSSHT=1,0.68,0.01,0,'==》两点上升见顶回调XX'),COLORMAGENTA;
+DRAWTEXT_FIX(ISLASTBAR AND MXLDSSTP=1,0.68,0.01,0,'==》两点上升中继模式√√'),COLORRED;
+DRAWTEXT_FIX(ISLASTBAR AND MXLDSSFZ=1,0.68,0.01,0,'==》两点上升反转下跌XX'),COLORMAGENTA;
+DRAWTEXT_FIX(ISLASTBAR AND MXLDXDFT=1,0.68,0.01,0,'==》两点下跌见底反弹√√'),COLORRED;
+DRAWTEXT_FIX(ISLASTBAR AND MXLDXDZJ=1,0.68,0.01,0,'==》两点下跌中继模式XX'),COLORMAGENTA;
+DRAWTEXT_FIX(ISLASTBAR AND MXLDFTTP=1,0.68,0.01,0,'==》两点下跌反转上升√√'),COLORRED;
+
+// 形态分析
+XG:=CONST(DQH1)>CONST(DQD1);  // 判断是否为上升形态
+XG1:=CONST(HQD1)>CONST(HQD2);  // 判断前低点位置关系
+
+// 形态提示
+DRAWTEXT_FIX(XG AND ISLASTBAR,0.02,0.01,0,'【符合标准N字上升形态】'),COLORRED;
+DRAWTEXT_FIX(NOT(XG) AND ISLASTBAR,0.02,0.01,0,'【符合标准N字下跌形态】'),COLORMAGENTA;
+
+// 买卖点标记
+DRAWTEXT(CURRBARSCOUNT=CONST(DQD1)+1,CONST(HQD1)*0.985,'二买'),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=CONST(DQD2)+1,CONST(HQD2)*0.985,'一买'),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=CONST(DQH1)+1,CONST(HQH1)*1.015,'二卖'),COLORMAGENTA;
+DRAWTEXT(CURRBARSCOUNT=CONST(DQH2)+1,CONST(HQH2)*1.01,'一卖'),COLORMAGENTA;
+
+// 顶底背离判断
+LC:=REF(CLOSE,1);  // 上一周期收盘价
+RSI:=((SMA(MAX((CLOSE - LC),0),3,1) / SMA(ABS((CLOSE - LC)),3,1)) * 100);  // RSI计算
+
+FF:=EMA(CLOSE,3);  // 短期均线
+MA15:=EMA(CLOSE,21);  // 中期均线
+DRAWTEXT(CROSS(FF,MA15),(LOW *0.999),'底背'),COLORRED;  // 标注底部背离
+
+// 顶部背离判断
+RSI1:=((SMA(MAX((CLOSE - (REF(CLOSE,1))),0),3,1) / SMA(ABS((CLOSE - (REF(CLOSE,1)))),3,1))* 100);
+DRAWTEXT(CROSS(88,RSI1) AND  (MA(C,3))>(EMA(C,3)) ,(HIGH *1.001),'顶背'),COLORGREEN;
+
+// 回调分析系统
+前一高:REF(H,BARSLAST(VV2)),COLOR99FF66,POINTDOT,LINETHICK3;  // 标记前一高点
+前二高:=REF(H,BARSLAST(XX2)),COLORFF66FF,POINTDOT,LINETHICK3;  // 标记前二高点
+
+// 密码模型计算
+MIMA:=CONST(SQRT(GDH/DDL));  // 计算股票密码(模数)
+ED1:=CONST(GDH/MIMA);        // 计算正常回调位置
+ED2:=CONST(GDH/SQRT(MIMA));  // 计算弱势回调位置
+ED3:=CONST(GDH/(SQRT(MIMA)+MIMA-1));  // 计算强势回调位置 
+
+// 回调分析系统的扩展
+KGCS:=IF(CONST(BARSLAST(VV))<CONST(BARSLAST(VV2)),1,-1),NODRAW;  // 时间轴判断，确定下跌模式
+DDTS:IF(KGCS>0,CONST(BARSLAST(XX)),CONST(BARSLAST(VV))),NODRAW;  // 空间轴判断，确定下跌模式
+高点天数:CONST(BARSLAST(VV2)),NODRAW;  // 计算高点形成的天数
+低点天数:DDTS,NODRAW;  // 计算低点形成的天数
+
+// 绘制K线和趋势线
+DRAWKLINE(H,O,L,C);  // 绘制K线图
+GDH:CONST(REF(H,高点天数)),NODRAW;  // 获取高点价格
+DDL:CONST(REF(L,低点天数)),NODRAW;  // 获取低点价格
+
+// 绘制趋势线和支撑压力线
+DRAWLINE(CURRBARSCOUNT=低点天数+1,L,CURRBARSCOUNT=高点天数+1,H,0),LINETHICK2,COLORRED;  // 绘制主趋势线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,H,ISLASTBAR,CONST(GDH),0),COLORMAGENTA;  // 绘制高点水平线
+DRAWLINE(CURRBARSCOUNT=低点天数+1,L,ISLASTBAR,CONST(DDL),0),LINETHICK2,COLORRED;  // 绘制低点水平线
+
+// 回调位置计算和显示
+MIMA1:=IF(GDCS>0,CONST(SQRT(GDDD/DDL)),MIMA),NODRAW;  // 计算修正后的密码
+XED1:=CONST(DDL/MIMA1),NODRAW;  // 计算正常回调位置
+XED2:=CONST(DDL/SQRT(MIMA1)),NODRAW;  // 计算弱势回调位置
+XED3:=CONST(DDL/(SQRT(MIMA1)+MIMA1-1)),NODRAW;  // 计算强势回调位置
+
+// 价格标记显示
+AA1:=STRCAT('低点:',CON2STR(CONST(DDL),2)),NODRAW;  // 构建低点价格标签
+BB1:=STRCAT('高点:',CON2STR(CONST(GDH),2)),NODRAW;  // 构建高点价格标签
+DRAWTEXT(CURRBARSCOUNT=高点天数+1,CONST(GDH)*1.0055,BB1),COLORRED;  // 显示高点价格
+DRAWTEXT(CURRBARSCOUNT=低点天数+1,CONST(DDL)*0.995,AA1),COLORRED;  // 显示低点价格
+
+// 回调位置标记
+LLOW:FINDLOW(L,0,高点天数,1),NODRAW;  // 寻找高点以来的最低点
+DLLOW:FINDLOWBARS(L,0,高点天数,1),NODRAW;  // 计算最低点到当前的天数
+CC1:=STRCAT('C:',CON2STR(CONST(LLOW),2)),NODRAW;  // 构建回调点价格标签
+DRAWTEXT(CURRBARSCOUNT=CONST(DLLOW)+1,CONST(LLOW)*0.995,CC1),COLORYELLOW;  // 显示回调点价格
+
+// 回调分析线条绘制
+DRAWLINE(CURRBARSCOUNT=高点天数+1,H,CURRBARSCOUNT=CONST(DLLOW)+1,L,0),DOTLINE,COLORWHITE;  // 绘制高点到回调点连线
+DSHIGH:FINDHIGHBARS(H,0,DLLOW,1),NODRAW;  // 计算回调后新高点到当前的天数
+ZDHIGH:FINDLOW(H,0,DLLOW,1),NODRAW;  // 获取回调后的最高点价格
+
+// 回调水平线绘制
+DRAWLINE(CURRBARSCOUNT=高点天数+1,ED1,CURRBARSCOUNT=CONST(DLLOW)+1,ED1,0),DOTLINE,COLORGRAY;  // 绘制正常回调水平线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,ED2,CURRBARSCOUNT=CONST(DLLOW)+1,ED2,0),DOTLINE,COLORGRAY;  // 绘制弱势回调水平线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,ED3,CURRBARSCOUNT=CONST(DLLOW)+1,ED3,0),DOTLINE,COLORGRAY;  // 绘制强势回调水平线
+
+// 回调价格标签显示
+CCC1:=STRCAT(STRCAT('C2:',CON2STR(CONST(ED1),2)),'-------------------');  // 构建正常回调价格标签
+CCC2:=STRCAT(STRCAT('C1:',CON2STR(CONST(ED2),2)),'-------------------');  // 构建弱势回调价格标签
+CCC3:=STRCAT(STRCAT('C3:',CON2STR(CONST(ED3),2)),'-------------------');  // 构建强势回调价格标签
+
+// 股票状态分析参数
+ST:=100*ABS(C-O)/REF(C,1);  // 计算振幅
+ZB:=CODELIKE('60') OR CODELIKE('00');  // 判断是否为主板股票
+ZT:=C=H AND C>=ZTPRICE(REF(C,1),0.1) AND ZB;  // 判断是否涨停
+LTSZZ:=FINANCE(46)*REF(C,1)/100000000;  // 计算流通市值(亿元)
+ZF:=(C/REF(C,1)-1)*100;  // 计算涨幅
+SYX:=100*(H-MAX(C,O))/REF(C,1);  // 计算上影线比例
+JZF:=(O/REF(C,1)-1)*100;  // 计算开盘涨幅
+
+// 交易量分析
+LNTJ:=C<O AND V>2*REF(V,1) AND REF(V>2*REF(V,1),1);  // 连续放量下跌判断
+ZTA:=ZT AND COUNT(ZT,5)=1 AND COUNT(EVERY(ZT AND H=L AND C=O,3),40)=0;  // 涨停板分析
+T1:=ZTA AND (V<REF(HHV(V,4),1) OR V>2*REF(HHV(V,3),1)) AND BARSCOUNT(C)>100;  // 首板涨停信号
+
+// 交易信号优化
+CRTJ:=IF(C>O,C<=REF(C,1),C<O) AND IF(REF(V<REF(HHV(V,4),1),1),V>2*REF(V,1),V>REF(V,1));  // 成交量放大判断
+T2:=REF(T1,1) AND JZF>-2 AND CRTJ AND NOT(LNTJ);  // 二次确认信号
+N1:=BARSLAST(T2);  // 计算信号间隔
+XX1:=(REF(L,N1+1)/LLV(L,N1)-1)*100;  // 计算回撤幅度 
+
+// 趋势确认信号
+T3:=EVERY(C<REF(HHV(H,2),N1) AND V<1.3*REF(V,N1),N1) AND XX1<19;  // 趋势延续确认
+T4:=C<O AND ST>1 AND V<REF(V,1) AND REF(C>O,1);  // 短期调整信号
+T5:=REF(T4,1) AND IF(C>O,ST<2,ST<0.5) AND V<REF(V,1) AND H<REF(H,1) AND ST<0.5*REF(ST,1);  // 调整延续信号
+
+// 反转信号系统
+T6:=REF(T5,1) AND O>REF(C,1) AND C>O AND ST>1 AND C>REF(O,2) AND V>REF(V,1) AND O<REF(O,2);  // 向上反转信号
+T8:=REF(T5,1) AND C>=O AND V<REF(V,2) AND H<REF(O,2) AND ST<0.5*REF(ST,2) AND ST<=1.5*REF(ST,1);  // 盘整信号
+T9:=REF(T8,1) AND O>REF(C,1) AND C>O AND ST>1 AND C>REF(O,3) AND V>REF(V,1);  // 突破信号
+T10:=T6 OR T9;  // 综合反转信号
+
+// 回调深度分析
+M:=BARSLASTCOUNT(C<O);  // 计算连续收阴的周期数
+T11:=M>1 AND REF(O,M-1)/C>1.02 AND REF(O,M-1)/C<1.08;  // 回调深度判断
+T12:=REF(T11,1) AND IF(C>O,ST<2,ST<0.5) AND V<REF(HHV(V,M),1) AND C<=REF(O,1);  // 回调企稳信号
+T13:=REF(T12,1) AND C>O AND V>REF(V,1) AND C>REF(O,2) AND ST>1 AND O<REF(O,2);  // 回调结束信号
+
+// 回调价格标签显示
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,ED1,CCC1),COLORGRAY;  // 显示正常回调价格
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,ED2,CCC2),COLORGRAY;  // 显示弱势回调价格
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,ED3,CCC3),COLORGRAY;  // 显示强势回调价格
+
+// 修正回调价格标签
+XCCC1:=STRCAT(STRCAT('X2:',CON2STR(CONST(XED1),2)),'-------------------');  // 构建修正正常回调价格标签
+XCCC2:=STRCAT(STRCAT('X1:',CON2STR(CONST(XED2),2)),'-------------------');  // 构建修正弱势回调价格标签
+XCCC3:=STRCAT(STRCAT('X3:',CON2STR(CONST(XED3),2)),'-------------------');  // 构建修正强势回调价格标签
+
+// 显示修正回调价格
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,XED1,XCCC1),COLORGRAY;  // 显示修正正常回调价格
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,XED2,XCCC2),COLORGRAY;  // 显示修正弱势回调价格
+DRAWTEXT(CURRBARSCOUNT=高点天数+4,XED3,XCCC3),COLORGRAY;  // 显示修正强势回调价格
+
+// 绘制修正回调水平线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,XED1,CURRBARSCOUNT=CONST(DLLOW)+1,XED1,0),DOTLINE,COLORGRAY;  // 绘制修正正常回调水平线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,XED2,CURRBARSCOUNT=CONST(DLLOW)+1,XED2,0),DOTLINE,COLORGRAY;  // 绘制修正弱势回调水平线
+DRAWLINE(CURRBARSCOUNT=高点天数+1,XED3,CURRBARSCOUNT=CONST(DLLOW)+1,XED3,0),DOTLINE,COLORGRAY;  // 绘制修正强势回调水平线 
