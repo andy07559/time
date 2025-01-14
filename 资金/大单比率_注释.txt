@@ -1,0 +1,42 @@
+// 大单比率指标 - 注释版本
+// 用于监测大单资金的相对强度，通过计算大单净买入相对流通市值的比例
+
+// === 基础参数设置 ===
+ORDER:=TRADEOUTNUM;                    // 成交笔数
+N:=5;                                  // 短期均线周期（5日）
+M:=30;                                 // 长期均线周期（30日）
+A1:= MIN(COUNT(ORDER>0,0),60);         // 有效交易日计数（最大60日）
+
+// === 大单数据获取 ===
+BU:= LARGEINTRDVOL,NODRAW;            // 大单买入量（不显示）
+SE:= LARGEOUTTRDVOL,NODRAW;           // 大单卖出量（不显示）
+
+// === 大单比率计算 ===
+大单比率: (BU-SE)/CAPITAL*100,NODRAW;  // 大单净买入量/流通市值*100
+
+// === 均线系统 ===
+均值1: EMA(大单比率,N);                // 短期指数移动平均（5日）
+均值2: EMA(大单比率,M);                // 长期指数移动平均（30日）
+
+// === 图形绘制 ===
+// 正值区域（蓝色渐变）
+STICKLINE(大单比率>0,0,大单比率,3,0),COLOR6060FF;    // 最外层（深蓝）
+STICKLINE(大单比率>0,0,大单比率,2.8,0),COLOR8080FF;  // 第二层
+STICKLINE(大单比率>0,0,大单比率,2.5,0),COLOR9090FF;  // 第三层
+STICKLINE(大单比率>0,0,大单比率,2.2,0),COLORA0A0FF;  // 第四层
+STICKLINE(大单比率>0,0,大单比率,1.8,0),COLORB0B0FF;  // 第五层
+STICKLINE(大单比率>0,0,大单比率,1.4,0),COLORC0C0FF;  // 第六层
+STICKLINE(大单比率>0,0,大单比率,1.0,0),COLORD0D0FF;  // 第七层
+STICKLINE(大单比率>0,0,大单比率,0.6,0),COLORE0E0FF;  // 第八层
+STICKLINE(大单比率>0,0,大单比率,0.2,0),COLORFFFFFF;  // 最内层（浅蓝）
+
+// 负值区域（黄色渐变）
+STICKLINE(大单比率<0,0,大单比率,3,0),COLORFFFF00;    // 最外层（深黄）
+STICKLINE(大单比率<0,0,大单比率,2.8,0),COLORFFFF20;  // 第二层
+STICKLINE(大单比率<0,0,大单比率,2.5,0),COLORFFFF40;  // 第三层
+STICKLINE(大单比率<0,0,大单比率,2.2,0),COLORFFFF60;  // 第四层
+STICKLINE(大单比率<0,0,大单比率,1.8,0),COLORFFFF80;  // 第五层
+STICKLINE(大单比率<0,0,大单比率,1.4,0),COLORFFFFA0;  // 第六层
+STICKLINE(大单比率<0,0,大单比率,1.0,0),COLORFFFFC0;  // 第七层
+STICKLINE(大单比率<0,0,大单比率,0.6,0),COLORFFFFD0;  // 第八层
+STICKLINE(大单比率<0,0,大单比率,0.2,0),COLORFFFFFF;  // 最内层（浅黄） 
