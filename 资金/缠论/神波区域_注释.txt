@@ -1,0 +1,109 @@
+// 神波区域指标
+// 版本: 1.0
+// 日期: 2024-01-14
+// 作者: CLAUDE
+
+{基础参数设置}
+N:=20;                  // 计算周期
+GD:=HHV(HIGH,N);       // N周期最高价
+DD:=LLV(LOW,N);        // N周期最低价
+KJ:=GD-DD;             // 区间跨度
+
+{区域划分计算}
+// 支撑位计算
+ZC:=SQRT(GD*DD);       // 支撑位 = 最高价与最低价的几何平均值
+
+// 回调位计算 
+HD:=SQRT(SQRT(GD*DD)*GD);  // 回调位 = 支撑位与最高价的几何平均值
+
+// 突破位计算
+TF:=POW(GD,2)/SQRT(SQRT(GD*DD)*GD);  // 突破位 = 最高价的平方/回调位
+
+// 警示位计算
+JS:=POW(SQRT(GD*DD),3)/POW(DD,2);    // 警示位 = 支撑位的立方/最低价的平方
+
+{区域判断}
+// 七大区域划分
+FXQY:=IF(C>JS,7,        // 风险区：价格高于警示位
+  IF(C>TF,6,            // 警示区：价格高于突破位
+    IF(C>HD,5,          // 突破区：价格高于回调位
+      IF(C>ZC,4,        // 拉升区：价格高于支撑位
+        IF(C>DD,3,      // 回调区：价格高于最低价
+          IF(C>LLV(LOW,5),2,1))))));  // 关注区和低吸区判断
+
+{信号系统}
+// 特殊形态识别
+XD:=LOW=LLV(LOW,N);     // 新低形态
+JSP:=COUNT(C>O,3)=3;    // 金三胖形态
+SYC:=XD AND JSP;        // 三叶虫形态
+YQY:=JSP AND VOL>MA(VOL,5);  // 一曲阳关形态
+
+// 底部确认系统
+YC:=XD AND VOL>MA(VOL,N);    // 一次确认
+EC:=YC AND C>MA(C,5);        // 二次确认
+QB:=EC AND VOL>2*MA(VOL,5);  // 启爆信号
+
+// 短线信号
+JM:=CROSS(C,MA(C,5));        // 今买明卖信号
+LH:=VOL>2*MA(VOL,20);        // 量化交易信号
+JZ:=HHV(HIGH,5)=HIGH;        // 极值信号
+
+{量价分析}
+// 均线系统
+MA5:=MA(C,5);           // 5日均线
+MA10:=MA(C,10);         // 10日均线
+MA20:=MA(C,20);         // 20日均线
+MA60:=MA(C,60);         // 60日均线
+
+// 成交量分析
+VOL5:=MA(VOL,5);        // 5日均量
+VOL10:=MA(VOL,10);      // 10日均量
+VOLR:=VOL/VOL5;         // 量比
+
+{风险控制}
+// 止损设置
+ZS1:=LLV(LOW,5);        // 五日最低止损
+ZS2:=MA(C,10);          // 均线止损
+ZS3:=DD;                // 区间止损
+
+// 预警信号
+YJ1:=C<MA5 AND MA5<MA10;  // 均线死叉预警
+YJ2:=VOL<VOL5*0.5;       // 量能萎缩预警
+YJ3:=FXQY>=6;            // 区域预警
+
+// 背离信号
+BL1:=HIGH>REF(HIGH,1) AND MACD<REF(MACD,1);  // 顶背离
+BL2:=LOW<REF(LOW,1) AND MACD>REF(MACD,1);    // 底背离
+
+{图形显示}
+// 区域边界
+DRAWTEXT(FXQY=7,'风险区',HIGH),COLORRED;    // 标注风险区
+DRAWTEXT(FXQY=6,'警示区',HIGH),COLORYELLOW; // 标注警示区
+DRAWTEXT(FXQY=5,'突破区',HIGH),COLORGREEN;  // 标注突破区
+DRAWTEXT(FXQY=4,'拉升区',HIGH),COLORGREEN;  // 标注拉升区
+DRAWTEXT(FXQY=3,'回调区',HIGH),COLORYELLOW; // 标注回调区
+DRAWTEXT(FXQY=2,'关注区',HIGH),COLORGREEN;  // 标注关注区
+DRAWTEXT(FXQY=1,'低吸区',HIGH),COLORRED;    // 标注低吸区
+
+// 信号标记
+DRAWICON(YC,LOW,1);      // 标记一次确认
+DRAWICON(EC,LOW,2);      // 标记二次确认
+DRAWICON(QB,LOW,3);      // 标记启爆信号
+DRAWICON(JM,HIGH,4);     // 标记今买明卖
+DRAWICON(LH,HIGH,5);     // 标记量化信号
+DRAWICON(JZ,HIGH,6);     // 标记极值信号
+
+// 支撑压力线
+DRAWLINE(FXQY>=6,JS,FXQY>=6,JS),COLORRED;    // 画警示线
+DRAWLINE(FXQY>=5,TF,FXQY>=5,TF),COLORGREEN;  // 画突破线
+DRAWLINE(FXQY>=4,HD,FXQY>=4,HD),COLORGREEN;  // 画回调线
+DRAWLINE(FXQY>=3,ZC,FXQY>=3,ZC),COLORYELLOW; // 画支撑线
+
+{指标输出}
+FXQY,NODRAW;            // 输出区域值
+YC,NODRAW;              // 输出一次确认
+EC,NODRAW;              // 输出二次确认
+QB,NODRAW;              // 输出启爆信号
+JM,NODRAW;              // 输出今买明卖
+LH,NODRAW;              // 输出量化信号
+JZ,NODRAW;              // 输出极值信号 
