@@ -1,0 +1,210 @@
+// 五点指标
+// 版本: 1.0
+// 日期: 2024-01-14
+// 作者: CLAUDE
+
+{基础变量定义}
+// 竞价信息计算
+X:=DYNAINFO(15)/O/100,NODRAW;                  // 竞价量比
+Y:=X/REF(V,1)*100>5,NODRAW;                   // 竞价放量判断
+A:=C/REF(C,1)>=1.095,NODRAW;                  // 涨停判断
+昨天首板:=REF(COUNT(A=0,1)=1,2) AND REF(A,1)=1,NODRAW;  // 昨日首次涨停
+
+// 开盘信息
+开盘金额:=DYNAINFO(15)/10000,NODRAW;          // 开盘成交额(万元)
+竞价换手率:=DYNAINFO(15)/O/CAPITAL,NODRAW;    // 竞价换手率
+今开%:=(O/REF(C,1)-1)*100,NODRAW;             // 今日开盘涨幅
+
+// 开盘条件组合
+XG:=今开%>0 AND 今开%<9 AND                   // 开盘涨幅在0-9%之间
+    开盘金额>1500 AND                         // 开盘金额大于1500万
+    竞价换手率>0.3 AND                        // 竞价换手率大于0.3%
+    昨天首板 AND Y;                           // 昨日首板且竞价放量
+
+{量能分析}
+// 标记放量K线
+STICKLINE(VOL/REF(VOL,1)>=2.8,O,C,1,0),COLORYELLOW;  // 成交量放大2.8倍标记
+
+{趋势点位判断}
+// 高点判断
+A1:=REF(HIGH,3)=HHV(HIGH,3*3+1),NODRAW;       // 前3日高点为10日内最高
+B1:=FILTER(A1,3),NODRAW;                      // 过滤连续高点
+C11:=BACKSET(B1,3+1),NODRAW;                  // 向前回溯4天
+D11:=FILTER(C11,3),NODRAW;                    // 再次过滤得到高点
+
+// 低点判断
+A2:=REF(LOW,3)=LLV(LOW,3*3+1),NODRAW;         // 前3日低点为10日内最低
+B2:=FILTER(A2,3),NODRAW;                      // 过滤连续低点
+C22:=BACKSET(B2,3+1),NODRAW;                  // 向前回溯4天
+D22:=FILTER(C22,3),NODRAW;                    // 再次过滤得到低点
+
+// 中轴计算
+E1:=(REF(LLV(LOW,2*3),1)+REF(HHV(HIGH,2*3),1))/2,NODRAW;  // 前期中轴
+E2:=(HIGH+LOW)/2,NODRAW;                      // 当前中轴
+
+// 趋势判断
+H1:=(D11 AND NOT(D22 AND E1>=E2)) OR BARSTATUS=2 OR BARSCOUNT(CLOSE)=1,NODRAW;  // 高点确认
+H2:=D11 AND NOT(D22 AND E1>=E2),NODRAW;       // 纯高点
+L1:=D22 AND NOT(D11 AND E1=E2),NODRAW;        // 低点确认
+
+// 趋势线计算
+X1:=REF(BARSLAST(H1),1)+1,NODRAW;             // 上一高点到当前的周期数
+F1:=BACKSET(H1 AND COUNT(L1,X1)>0,LLVBARS(IF(L1,LOW,10000),X1)),NODRAW;  // 高点回溯低点
+G1:=F1>REF(F1,1),NODRAW;                      // 低点比较
+I1:=BACKSET(G1,2),NODRAW;                     // 向前回溯2天
+LD:=I1>REF(I1,1),NODRAW;                      // 下降趋势确认
+
+// 趋势线绘制
+IF(1,DRAWLINE(LD,L,HD,H,0),DRAWNULL),LINETHICK1,DOTLINE,COLOR0000FF;  // 绘制下降趋势线
+IF(1,DRAWLINE(HD,H,LD,L,0),DRAWNULL),LINETHICK1,DOTLINE,COLOR00FF00;  // 绘制上升趋势线
+
+{买卖点判断}
+// 周期计算
+Q0:=BARSLAST(XX2>0);                          // 第一买点到当前周期
+Q1:=BARSLAST(XX>0);                           // 第二买点到当前周期
+Q2:=BARSLAST(WW2>0);                          // 第三买点到当前周期
+Q3:=BARSLAST(VV>0);                           // 第一卖点到当前周期
+Q4:=BARSLAST(XXQ>0);                          // 第二卖点到当前周期
+Q5:=BARSLAST(XX3Q>0);                         // 第三卖点到当前周期
+Q6:=BARSLAST(XX4Q>0);                         // 第四卖点到当前周期
+
+{买卖点定位}
+// 两点卖出
+周期E:=BARSLAST(XX3Q=1 AND Q5<Q4);            // E点周期
+周期D:=BARSLAST(XX=1 AND Q5<Q4);              // D点周期
+E:=REF(H,周期E);                              // E点价格
+D:=REF(L,周期D);                              // D点价格
+
+// 目标价计算
+XS1:=SQRT(E/D);                               // 价格比率
+Ｃ11:=D*SQRT(XS1);                            // 第一目标价
+Ｃ12:=D*XS1;                                  // 第二目标价
+Ｃ13:=D*(SQRT(XS1)+XS1-1);                    // 第三目标价
+
+// 绘制目标价线
+STICKLINE(CURRBARSCOUNT=周期D+1,D,Ｃ13,0,-1),COLORFF00FF;  // 绘制目标价区间
+DRAWLINE(CURRBARSCOUNT=周期D+1,Ｃ11,CURRBARSCOUNT=周期D-3,Ｃ11,0),DOTLINE,COLORFF00FF;  // 第一目标价线
+DRAWLINE(CURRBARSCOUNT=周期D+1,Ｃ12,CURRBARSCOUNT=周期D-5,Ｃ12,0),DOTLINE,COLORFF00FF;  // 第二目标价线
+DRAWLINE(CURRBARSCOUNT=周期D+1,Ｃ13,CURRBARSCOUNT=周期D-7,Ｃ13,0),DOTLINE,COLORFF00FF;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期D+1,Ｃ11,VARCAT('C1=',VAR2STR(Ｃ11,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期D+1,Ｃ12,VARCAT('C2=',VAR2STR(Ｃ12,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期D+1,Ｃ13,VARCAT('(E、D)C3=',VAR2STR(Ｃ13,2))),COLORYELLOW; 
+
+{两点卖出，Ａ-,Ｂ-}
+// A-B-点位计算
+周期Ａ2:=BARSLAST(XX2=1 AND Q0<Q1);           // A点周期
+周期Ｂ2:=BARSLAST(VV=1 AND Q0<Q1);            // B点周期
+Ａ2:=REF(H,周期Ａ2);                          // A点价格
+Ｂ2:=REF(L,周期Ｂ2);                          // B点价格
+
+// 目标价计算
+XS2:=SQRT((Ａ2)/(Ｂ2));                       // 价格比率
+Ｃ21:=Ｂ2*SQRT(XS2);                          // 第一目标价
+Ｃ22:=Ｂ2*XS2;                                // 第二目标价
+Ｃ23:=Ｂ2*(SQRT(XS2)+XS2-1);                  // 第三目标价
+
+// 绘制目标价线
+STICKLINE(CURRBARSCOUNT=周期Ｂ2+1,Ｂ2,Ｃ23,0,-1),COLORMAGENTA;  // 绘制目标价区间
+DRAWLINE(CURRBARSCOUNT=周期Ｂ2+1,Ｃ21,CURRBARSCOUNT=周期Ｂ2-3,Ｃ21,0),DOTLINE,COLORFF00FF;  // 第一目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｂ2+1,Ｃ22,CURRBARSCOUNT=周期Ｂ2-5,Ｃ22,0),DOTLINE,COLORFF00FF;  // 第二目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｂ2+1,Ｃ23,CURRBARSCOUNT=周期Ｂ2-6,Ｃ23,0),DOTLINE,COLORFF00FF;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｃ21,VARCAT('C1D=',VAR2STR(Ｃ21,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｃ22,VARCAT('C2D=',VAR2STR(Ｃ22,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｃ23,VARCAT('(A-、B-)C3D=',VAR2STR(Ｃ23,2))),COLORYELLOW;
+
+{三点卖出，D，Ａ-，Ｂ-，创新高}
+// 三点位置计算
+周期Ｃ2:=BARSLAST(VV2=1 AND Q0<Q1);           // C点周期
+Ｃ2:=REF(H,周期Ｃ2);                          // C点价格
+Ａ3:=IFC(D<Ｂ2,Ａ2,DRAWNULL);                 // A3点价格条件判断
+
+// 目标价计算
+VARV1:=SQRT(Ａ3/D);                           // 第一价格比率
+VARV2:=SQRT(VARV1);                           // 第二价格比率
+N1:=Ａ3/VARV2;                                // N1价格
+N2:=Ａ3/VARV1;                                // N2价格
+N3:=Ａ3/(VARV2+VARV1-1);                      // N3价格
+
+// 目标价位计算
+Ｄ11:=2*Ａ3-D-(N2-N3),COLORRED,NODRAW;        // 第一目标价
+Ｄ12:=Ａ3+(Ａ2-D),COLORRED,NODRAW;            // 第二目标价
+Ｄ13:=2*Ａ3-D+(N1-N2),COLORRED,NODRAW;        // 第三目标价
+
+// 绘制目标价线
+STICKLINE(D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2+1,Ｂ2,Ｄ13,0,0),COLORLIRED;  // 绘制目标价区间
+DRAWLINE(D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2+1,Ｄ11,D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2-8,Ｄ11,0),DOTLINE,COLORLIRED;  // 第一目标价线
+DRAWLINE(D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2+1,Ｄ12,D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2-8,Ｄ12,0),DOTLINE,COLORLIRED;  // 第二目标价线
+DRAWLINE(D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2+1,Ｄ13,D<Ｂ2 AND CURRBARSCOUNT=周期Ｂ2-8,Ｄ13,0),DOTLINE,COLORLIRED;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｄ11,VARCAT('(D、A-、B-)D1B=',VAR2STR(Ｄ11,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｄ12,VARCAT('D2=B',VAR2STR(Ｄ12,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ2+1,Ｄ13,VARCAT('D3=B',VAR2STR(Ｄ13,2))),COLORWHITE;
+
+{两点买入，D，Ａ-}
+// 目标价计算
+XS3:=SQRT(Ａ2/D);                             // 价格比率
+Ｃ31:=Ａ2/SQRT(XS3);                          // 第一目标价
+Ｃ32:=Ａ2/XS3;                                // 第二目标价
+Ｃ33:=Ａ2/(SQRT(XS3)+XS3-1);                  // 第三目标价
+
+// 绘制目标价线
+STICKLINE(CURRBARSCOUNT=周期Ａ2+1,Ａ2,Ｃ33,0,-1),COLORFF8000;  // 绘制目标价区间
+DRAWLINE(CURRBARSCOUNT=周期Ａ2+1,Ｃ31,CURRBARSCOUNT=周期Ａ2-3,Ｃ31,0),DOTLINE,COLORFF8000;  // 第一目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ａ2+1,Ｃ32,CURRBARSCOUNT=周期Ａ2-5,Ｃ32,0),DOTLINE,COLORFF8000;  // 第二目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ａ2+1,Ｃ33,CURRBARSCOUNT=周期Ａ2-7,Ｃ33,0),DOTLINE,COLORFF8000;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期Ａ2+1,Ｃ31,VARCAT('C1C=',VAR2STR(Ｃ31,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ａ2+1,Ｃ32,VARCAT('C2C=',VAR2STR(Ｃ32,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ａ2+1,Ｃ33,VARCAT('(D、Ａ-)C3C=',VAR2STR(Ｃ33,2))),COLORWHITE;
+
+{两点买入，Ａ，Ｂ}
+// A-B点位计算
+周期Ａ:=BARSLAST(XX=1 AND Q0>Q1);             // A点周期
+周期Ｂ:=BARSLAST(VV2=1 AND Q0>Q1);            // B点周期
+Ａ:=REF(L,周期Ａ);                            // A点价格
+Ｂ:=REF(H,周期Ｂ);                            // B点价格
+
+// 目标价计算
+XS4:=SQRT(Ｂ/Ａ);                             // 价格比率
+Ｃ41:=Ｂ/SQRT(XS4);                           // 第一目标价
+Ｃ42:=Ｂ/XS4;                                 // 第二目标价
+Ｃ43:=Ｂ/(SQRT(XS4)+XS4-1);                   // 第三目标价
+
+// 绘制目标价线
+STICKLINE(CURRBARSCOUNT=周期Ｂ+1,Ｂ,Ｃ43,0,-1),COLORFF8000;  // 绘制目标价区间
+DRAWLINE(CURRBARSCOUNT=周期Ｂ+1,Ｃ41,CURRBARSCOUNT=1,Ｃ41,0),DOTLINE,COLORFF8000;  // 第一目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｂ+1,Ｃ42,CURRBARSCOUNT=1,Ｃ42,0),DOTLINE,COLORFF8000;  // 第二目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｂ+1,Ｃ43,CURRBARSCOUNT=1,Ｃ43,0),DOTLINE,COLORFF8000;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ+1,Ｃ41,VARCAT('C1B=',VAR2STR(Ｃ41,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ+1,Ｃ42,VARCAT('C2B=',VAR2STR(Ｃ42,2))),COLORWHITE;
+DRAWTEXT(CURRBARSCOUNT=周期Ｂ+1,Ｃ43,VARCAT('(A、B)C3B=',VAR2STR(Ｃ43,2))),COLORWHITE;
+
+{两点卖出，Ｂ，Ｃ}
+// B-C点位计算
+周期Ｃ:=BARSLAST(VV=1 AND Q0>Q1);             // C点周期
+Ｃ:=REF(L,周期Ｃ);                            // C点价格
+
+// 目标价计算
+XS5:=SQRT(Ｂ/Ｃ);                             // 价格比率
+Ｃ51:=Ｃ*SQRT(XS5);                           // 第一目标价
+Ｃ52:=Ｃ*XS5;                                 // 第二目标价
+Ｃ53:=Ｃ*(SQRT(XS5)+XS5-1);                   // 第三目标价
+
+// 绘制目标价线
+STICKLINE(CURRBARSCOUNT=周期Ｃ+1,Ｃ,Ｃ53,0,-1),COLORMAGENTA;  // 绘制目标价区间
+DRAWLINE(CURRBARSCOUNT=周期Ｃ+1,Ｃ51,CURRBARSCOUNT=周期Ｃ-1,Ｃ51,0),DOTLINE,COLORFF00FF;  // 第一目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｃ+1,Ｃ52,CURRBARSCOUNT=周期Ｃ-2,Ｃ52,0),DOTLINE,COLORFF00FF;  // 第二目标价线
+DRAWLINE(CURRBARSCOUNT=周期Ｃ+1,Ｃ53,CURRBARSCOUNT=周期Ｃ-3,Ｃ53,0),DOTLINE,COLORFF00FF;  // 第三目标价线
+
+// 显示价格标签
+DRAWTEXT(CURRBARSCOUNT=周期Ｃ+1,Ｃ51,VARCAT('C1A=',VAR2STR(Ｃ51,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期Ｃ+1,Ｃ52,VARCAT('C2A=',VAR2STR(Ｃ52,2))),COLORYELLOW;
+DRAWTEXT(CURRBARSCOUNT=周期Ｃ+1,Ｃ53,VARCAT('(B、C)C3A=',VAR2STR(Ｃ53,2))),COLORYELLOW; 
